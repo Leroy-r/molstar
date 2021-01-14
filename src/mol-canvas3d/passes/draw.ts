@@ -123,11 +123,16 @@ export class DrawPass {
         }
     }
 
-    private _depthMerge() {
+    private _depthMerge(renderer: Renderer, camera: ICamera) {
         const { state, gl } = this.webgl;
 
         this.depthMerge.update();
         this.depthTarget.bind();
+
+        // #safari-wboit: 4
+        // const { x, y, width, height } = camera.viewport;
+        // renderer.setViewport(x, y, width, height);
+
         state.disable(gl.BLEND);
         state.disable(gl.DEPTH_TEST);
         state.disable(gl.CULL_FACE);
@@ -140,33 +145,54 @@ export class DrawPass {
     private _renderWboit(renderer: Renderer, camera: ICamera, scene: Scene, toDrawingBuffer: boolean) {
         if (!this.wboit?.enabled) throw new Error('expected wboit to be enabled');
 
+        // #safari-wboit: 0
+        // renderer.setDrawingBufferSize(this.colorTarget.getWidth(), this.colorTarget.getHeight());
+
+        // #safari-wboit
+        // const { x, y, width, height } = camera.viewport;
+
         const renderTarget = toDrawingBuffer ? this.drawTarget : this.colorTarget;
         renderTarget.bind();
+        // #safari-wboit: 1
+        // renderer.setViewport(x, y, width, height);
+        // gl.scissor(x, y, width, height);
         renderer.clear(true);
 
         // render opaque primitives
         this.depthTexturePrimitives.attachFramebuffer(renderTarget.framebuffer, 'depth');
         renderTarget.bind();
+        // #safari-wboit: 2
+        // renderer.setViewport(x, y, width, height);
+        // gl.scissor(x, y, width, height);
         renderer.renderWboitOpaque(scene.primitives, camera, null);
 
         // render opaque volumes
         this.depthTextureVolumes.attachFramebuffer(renderTarget.framebuffer, 'depth');
         renderTarget.bind();
+        // #safari-wboit: 3
+        // renderer.setViewport(x, y, width, height);
+        // gl.scissor(x, y, width, height);
         renderer.clearDepth();
         renderer.renderWboitOpaque(scene.volumes, camera, this.depthTexturePrimitives);
 
         // merge depth of opaque primitives and volumes
-        this._depthMerge();
+        this._depthMerge(renderer, camera);
 
         // render transparent primitives and volumes
         this.wboit.bind();
+        // #safari-wboit: 5
+        // renderer.setViewport(x, y, width, height);
+        // gl.scissor(x, y, width, height);
         renderer.renderWboitTransparent(scene.primitives, camera, this.depthTexture);
         renderer.renderWboitTransparent(scene.volumes, camera, this.depthTexture);
 
         // evaluate wboit
         this.depthTexturePrimitives.attachFramebuffer(renderTarget.framebuffer, 'depth');
         renderTarget.bind();
-        this.wboit.render();
+        // #safari-wboit: 6
+        // renderer.setViewport(x, y, width, height);
+        // gl.scissor(x, y, width, height);
+        this.wboit.render(camera.viewport);
     }
 
     private _renderBlended(renderer: Renderer, camera: ICamera, scene: Scene, toDrawingBuffer: boolean) {
@@ -216,7 +242,7 @@ export class DrawPass {
 
         // merge depths from primitive and volume rendering
         if (!toDrawingBuffer) {
-            this._depthMerge();
+            this._depthMerge(renderer, camera);
             this.colorTarget.bind();
         }
     }

@@ -18,6 +18,7 @@ import evaluate_wboit_frag from '../../mol-gl/shader/evaluate-wboit.frag';
 import { Framebuffer } from '../../mol-gl/webgl/framebuffer';
 import { Vec2 } from '../../mol-math/linear-algebra';
 import { isDebugMode } from '../../mol-util/debug';
+import { Viewport } from '../camera/util';
 
 const EvaluateWboitSchema = {
     ...QuadSchema,
@@ -70,8 +71,13 @@ export class WboitPass {
         state.enable(gl.BLEND);
     }
 
-    render() {
+    render(viewport: Viewport) {
         const { state, gl } = this.webgl;
+
+        // #safari-wboit
+        const { x, y, width, height } = viewport;
+        gl.viewport(x, y, width, height);
+        gl.scissor(x, y, width, height);
 
         state.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         state.enable(gl.BLEND);

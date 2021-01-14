@@ -510,6 +510,11 @@ namespace Renderer {
 
         return {
             clear: (toBackgroundColor: boolean) => {
+                // #safari-wboit
+                const { x, y, width, height } = viewport;
+                gl.viewport(x, y, width, height);
+                gl.scissor(x, y, width, height);
+
                 state.enable(gl.SCISSOR_TEST);
                 state.enable(gl.DEPTH_TEST);
                 state.colorMask(true, true, true, true);

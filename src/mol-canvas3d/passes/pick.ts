@@ -183,6 +183,9 @@ export class PickHelper {
             this.pickPass.render(renderer, camera, scene, helper);
         }
 
+        // #safari-wboit
+        // this.webgl.gl.flush();
+
         this.dirty = false;
     }
 
