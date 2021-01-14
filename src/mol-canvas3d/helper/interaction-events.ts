@@ -19,6 +19,17 @@ type ClickEvent = import('../canvas3d').Canvas3D.ClickEvent
 
 const enum InputEvent { Move, Click, Drag }
 
+interface EventInstance {
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    buttons: ButtonsType,
+    button: ButtonsType.Flag,
+    modifiers: ModifiersKeys,
+    e: InputEvent
+}
+
 export class Canvas3dInteractionHelper {
     private ev = RxEventHelper.create();
 
@@ -48,18 +59,20 @@ export class Canvas3dInteractionHelper {
     private button: ButtonsType.Flag = ButtonsType.create(0);
     private modifiers: ModifiersKeys = ModifiersKeys.None;
 
+    private eventStack: EventInstance[] = [];
+
     private identify(e: InputEvent, t: number) {
         const xyChanged = this.startX !== this.endX || this.startY !== this.endY;
 
-        if (e === InputEvent.Drag) {
-            if (xyChanged && !Representation.Loci.isEmpty(this.prevLoci)) {
-                this.events.drag.next({ current: this.prevLoci, buttons: this.buttons, button: this.button, modifiers: this.modifiers, pageStart: Vec2.create(this.startX, this.startY), pageEnd: Vec2.create(this.endX, this.endY) });
+        // if (e === InputEvent.Drag) {
+        //     if (xyChanged && !Representation.Loci.isEmpty(this.prevLoci)) {
+        //         this.events.drag.next({ current: this.prevLoci, buttons: this.buttons, button: this.button, modifiers: this.modifiers, pageStart: Vec2.create(this.startX, this.startY), pageEnd: Vec2.create(this.endX, this.endY) });
 
-                this.startX = this.endX;
-                this.startY = this.endY;
-            }
-            return;
-        }
+        //         this.startX = this.endX;
+        //         this.startY = this.endY;
+        //     }
+        //     return;
+        // }
 
         if (xyChanged) {
             const pickData = this.canvasIdentify(this.endX, this.endY);
@@ -69,12 +82,12 @@ export class Canvas3dInteractionHelper {
             this.startY = this.endY;
         }
 
-        if (e === InputEvent.Click) {
-            const loci = this.getLoci(this.id);
-            this.events.click.next({ current: loci, buttons: this.buttons, button: this.button, modifiers: this.modifiers, page: Vec2.create(this.endX, this.endY), position: this.position });
-            this.prevLoci = loci;
-            return;
-        }
+        // if (e === InputEvent.Click) {
+        //     const loci = this.getLoci(this.id);
+        //     this.events.click.next({ current: loci, buttons: this.buttons, button: this.button, modifiers: this.modifiers, page: Vec2.create(this.endX, this.endY), position: this.position });
+        //     this.prevLoci = loci;
+        //     return;
+        // }
 
         if (!this.inside || this.currentIdentifyT !== t || !xyChanged || this.outsideViewport(this.endX, this.endY)) return;
 
@@ -83,7 +96,33 @@ export class Canvas3dInteractionHelper {
         this.prevLoci = loci;
     }
 
+    private identifyClick(e: EventInstance) {
+        const pickData = this.canvasIdentify(e.endX, e.endY);
+        this.id = pickData?.id;
+        this.position = pickData?.position;
+
+        const loci = this.getLoci(this.id);
+        this.events.click.next({ current: loci, buttons: e.buttons, button: e.button, modifiers: e.modifiers, page: Vec2.create(e.endX, e.endY), position: this.position });
+        this.prevLoci = loci;
+    }
+
+    private identifyDrag(e: EventInstance) {
+        const xyChanged = e.startX !== e.endX || e.startY !== e.endY;
+        if (xyChanged && !Representation.Loci.isEmpty(this.prevLoci)) {
+            this.events.drag.next({ current: this.prevLoci, buttons: e.buttons, button: e.button, modifiers: e.modifiers, pageStart: Vec2.create(e.startX, e.startY), pageEnd: Vec2.create(e.endX, e.endY) });
+        }
+    }
+
     tick(t: number) {
+        // process input events at 30 fps
+        if (this.inside && t - this.prevT > 1000 / 30) {
+            for (const e of this.eventStack) {
+                if (e.e === InputEvent.Click) this.identifyClick(e);
+                else if (e.e === InputEvent.Drag) this.identifyDrag(e);
+            }
+            if (this.eventStack.length > 0) this.eventStack = [];
+        }
+
         if (this.inside && t - this.prevT > 1000 / this.maxFps) {
             this.prevT = t;
             this.currentIdentifyT = t;
@@ -109,21 +148,42 @@ export class Canvas3dInteractionHelper {
     }
 
     private click(x: number, y: number, buttons: ButtonsType, button: ButtonsType.Flag, modifiers: ModifiersKeys) {
-        this.endX = x;
-        this.endY = y;
-        this.buttons = buttons;
-        this.button = button;
-        this.modifiers = modifiers;
-        this.identify(InputEvent.Click, 0);
+        this.eventStack.push({
+            startX: this.startX,
+            startY: this.startY,
+            endX: x,
+            endY: y,
+            buttons,
+            button,
+            modifiers,
+            e: InputEvent.Click
+        });
+        // this.endX = x;
+        // this.endY = y;
+        // this.buttons = buttons;
+        // this.button = button;
+        // this.modifiers = modifiers;
+        // this.identify(InputEvent.Click, 0);
     }
 
     private drag(x: number, y: number, buttons: ButtonsType, button: ButtonsType.Flag, modifiers: ModifiersKeys) {
-        this.endX = x;
-        this.endY = y;
-        this.buttons = buttons;
-        this.button = button;
-        this.modifiers = modifiers;
-        this.identify(InputEvent.Drag, 0);
+        this.eventStack.push({
+            startX: this.startX,
+            startY: this.startY,
+            endX: x,
+            endY: y,
+            buttons,
+            button,
+            modifiers,
+            e: InputEvent.Drag
+        });
+
+        // this.endX = x;
+        // this.endY = y;
+        // this.buttons = buttons;
+        // this.button = button;
+        // this.modifiers = modifiers;
+        // this.identify(InputEvent.Drag, 0);
     }
 
     private modify(modifiers: ModifiersKeys) {

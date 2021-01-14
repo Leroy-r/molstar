@@ -155,7 +155,7 @@ export class DrawPass {
         renderTarget.bind();
         // #safari-wboit: 1
         // renderer.setViewport(x, y, width, height);
-        // gl.scissor(x, y, width, height);
+        // this.webgl.gl.scissor(x, y, width, height);
         renderer.clear(true);
 
         // render opaque primitives
@@ -163,7 +163,7 @@ export class DrawPass {
         renderTarget.bind();
         // #safari-wboit: 2
         // renderer.setViewport(x, y, width, height);
-        // gl.scissor(x, y, width, height);
+        // this.webgl.gl.scissor(x, y, width, height);
         renderer.renderWboitOpaque(scene.primitives, camera, null);
 
         // render opaque volumes
@@ -171,7 +171,7 @@ export class DrawPass {
         renderTarget.bind();
         // #safari-wboit: 3
         // renderer.setViewport(x, y, width, height);
-        // gl.scissor(x, y, width, height);
+        // this.webgl.gl.scissor(x, y, width, height);
         renderer.clearDepth();
         renderer.renderWboitOpaque(scene.volumes, camera, this.depthTexturePrimitives);
 
@@ -182,7 +182,7 @@ export class DrawPass {
         this.wboit.bind();
         // #safari-wboit: 5
         // renderer.setViewport(x, y, width, height);
-        // gl.scissor(x, y, width, height);
+        // this.webgl.gl.scissor(x, y, width, height);
         renderer.renderWboitTransparent(scene.primitives, camera, this.depthTexture);
         renderer.renderWboitTransparent(scene.volumes, camera, this.depthTexture);
 
@@ -191,7 +191,7 @@ export class DrawPass {
         renderTarget.bind();
         // #safari-wboit: 6
         // renderer.setViewport(x, y, width, height);
-        // gl.scissor(x, y, width, height);
+        // this.webgl.gl.scissor(x, y, width, height);
         this.wboit.render(camera.viewport);
     }
 
